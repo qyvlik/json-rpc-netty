@@ -12,13 +12,13 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-// 短线重连
 @ChannelHandler.Sharable
 public class JsonRpcClientHandler extends ChannelHandlerAdapter {
 
     private ChannelHandlerContext channelHandlerContext;
     private ConcurrentSkipListMap<Long, SendAndCallBack> callbackMap = new ConcurrentSkipListMap();
     private AtomicBoolean active = new AtomicBoolean(false);
+    private AtomicBoolean connecting = new AtomicBoolean(true);
 
     public JsonRpcClientHandler() {
 
@@ -28,6 +28,7 @@ public class JsonRpcClientHandler extends ChannelHandlerAdapter {
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
         super.channelInactive(ctx);
         active.set(false);
+        disableConnection();
 
         while (!callbackMap.isEmpty()) {
             Map.Entry entry = callbackMap.pollFirstEntry();
@@ -41,6 +42,7 @@ public class JsonRpcClientHandler extends ChannelHandlerAdapter {
     public void channelActive(ChannelHandlerContext ctx) throws Exception {
         this.channelHandlerContext = ctx;
         active.set(true);
+        disableConnection();
     }
 
     @Override
@@ -59,6 +61,7 @@ public class JsonRpcClientHandler extends ChannelHandlerAdapter {
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause)
             throws Exception {
+        disableConnection();
         ctx.close();
     }
 
@@ -87,5 +90,13 @@ public class JsonRpcClientHandler extends ChannelHandlerAdapter {
 
     public boolean isActive() {
         return active.get();
+    }
+
+    public boolean isConnecting() {
+        return connecting.get();
+    }
+
+    public void disableConnection() {
+        connecting.set(false);
     }
 }

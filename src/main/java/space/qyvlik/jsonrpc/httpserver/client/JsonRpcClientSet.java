@@ -2,14 +2,17 @@ package space.qyvlik.jsonrpc.httpserver.client;
 
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
 public class JsonRpcClientSet {
-
     private volatile JsonRpcClient[] jsonRpcClientList;
     private AtomicLong callNum;
     private int clientSize;
     private Executor executor;
+    private ScheduledExecutorService scheduledExecutorService = Executors.newScheduledThreadPool(1);
+
     private String host;
     private int port;
 
@@ -23,26 +26,53 @@ public class JsonRpcClientSet {
         this.host = host;
         this.port = port;
 
-        jsonRpcClientList = new JsonRpcClient[clientSize];
+        jsonRpcClientList = new JsonRpcClient[this.clientSize];
 
-        for (int index = 0; index < clientSize; index++) {
-            startJsonRpcClient(index);
+        for (int index = 0; index < this.clientSize; index++) {
+            restartJsonRpcClient(index, true);
         }
+
+        scheduledExecutorService.scheduleAtFixedRate(new Runnable() {
+            @Override
+            public void run() {
+                maintainClients();
+            }
+        }, 5, 1, TimeUnit.SECONDS);
+
     }
 
     public JsonRpcClient pollingJsonRpcClient() {
         return jsonRpcClientList[(int) (callNum.getAndIncrement() % clientSize)];
     }
 
-    protected JsonRpcClient startJsonRpcClient(int index) {
-        final JsonRpcClient jsonRpcClient = new JsonRpcClient();
-        jsonRpcClientList[index] = jsonRpcClient;
+    protected JsonRpcClient restartJsonRpcClient(int index, boolean create) {
+        if (create) {
+            jsonRpcClientList[index] = new JsonRpcClient();
+        }
+        final JsonRpcClient jsonRpcClient = jsonRpcClientList[index];
         executor.execute(new Runnable() {
             @Override
             public void run() {
+//                System.out.println(create ? "start client" : "restart client");
                 jsonRpcClient.start(host, port);
             }
         });
         return jsonRpcClient;
+    }
+
+    private void maintainClients() {
+        for (int index = 0; index < JsonRpcClientSet.this.clientSize; index++) {
+            JsonRpcClient jsonRpcClient = jsonRpcClientList[index];
+
+            if (jsonRpcClient.isActive()) {
+                continue;
+            }
+
+            if (!jsonRpcClient.isActive() && jsonRpcClient.isConnecting()) {
+                continue;
+            }
+
+            restartJsonRpcClient(index, false);
+        }
     }
 }

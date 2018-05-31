@@ -13,9 +13,7 @@ public class JsonRpcClient {
     private JsonRpcClientHandler jsonRpcClientHandler;
 
     public JsonRpcClient() {
-        loopGroup = new NioEventLoopGroup();
-        bootstrap = new Bootstrap();
-        jsonRpcClientHandler = new JsonRpcClientHandler();
+
     }
 
     public static void main(String[] args) throws Exception {
@@ -32,8 +30,19 @@ public class JsonRpcClient {
         new JsonRpcClient().start(host, port);
     }
 
+    public boolean isConnecting() {
+        if (jsonRpcClientHandler != null) {
+            return jsonRpcClientHandler.isConnecting();
+        }
+        return false;
+
+    }
+
     public boolean isActive() {
-        return jsonRpcClientHandler.isActive();
+        if (jsonRpcClientHandler != null) {
+            return jsonRpcClientHandler.isActive();
+        }
+        return false;
     }
 
     public void send(JSONObject json, SendAndCallBack callBack) {
@@ -42,25 +51,30 @@ public class JsonRpcClient {
 
     // use work thread
     public void start(String host, Integer port) {
-        bootstrap.group(loopGroup);
-        bootstrap.channel(NioSocketChannel.class);
-        bootstrap.option(ChannelOption.TCP_NODELAY, true);
-        bootstrap.handler(new ChannelInitializer<Channel>() {
-            @Override
-            protected void initChannel(Channel ch) throws Exception {
-                ch.pipeline().addLast(jsonRpcClientHandler);
-            }
-        });
+        loopGroup = new NioEventLoopGroup();
+        jsonRpcClientHandler = new JsonRpcClientHandler();
+        bootstrap = new Bootstrap();
 
         try {
+            bootstrap.group(loopGroup);
+            bootstrap.channel(NioSocketChannel.class);
+            bootstrap.option(ChannelOption.TCP_NODELAY, true);
+
+            bootstrap.handler(new ChannelInitializer<Channel>() {
+                @Override
+                protected void initChannel(Channel ch) throws Exception {
+                    ch.pipeline().addLast(jsonRpcClientHandler);
+                }
+            });
+
             ChannelFuture channelFuture = bootstrap.connect(host, port).sync();
             channelFuture.channel().closeFuture().sync();
+        } catch (Exception e) {
 
-            System.out.println("JsonRpcClient close");
+            jsonRpcClientHandler.disableConnection();
 
-        } catch (InterruptedException e) {
-            // TODO Auto-generated catch block
             e.printStackTrace();
+
         } finally {
             loopGroup.shutdownGracefully();
         }
