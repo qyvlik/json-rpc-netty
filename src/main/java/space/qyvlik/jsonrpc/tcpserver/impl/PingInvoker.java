@@ -6,7 +6,7 @@ import space.qyvlik.jsonrpc.tcpserver.mapper.JsonRpcResultFuture;
 
 public class PingInvoker implements IJsonRpcInvoker {
     @Override
-    public void call(Long id, JSONArray params, JsonRpcResultFuture resultFuture) {
-        resultFuture.result(id, System.currentTimeMillis());
+    public void call(final long requestIndex, Long id, JSONArray params, JsonRpcResultFuture resultFuture) {
+        resultFuture.result(requestIndex, id, System.currentTimeMillis());
     }
 }

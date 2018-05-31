@@ -10,17 +10,20 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.*;
 import org.apache.commons.lang3.StringUtils;
 import space.qyvlik.jsonrpc.httpserver.client.JsonRpcClient;
+import space.qyvlik.jsonrpc.httpserver.client.JsonRpcClientSet;
 import space.qyvlik.jsonrpc.httpserver.client.SendAndCallBack;
 
 import java.nio.charset.StandardCharsets;
+import java.util.concurrent.atomic.AtomicLong;
 
 
 @ChannelHandler.Sharable
 public class JsonRpcHttpServerHandle extends ChannelHandlerAdapter {
-    private JsonRpcClient jsonRpcClient;
+    private JsonRpcClientSet jsonRpcClientSet;
+    private AtomicLong requestCount = new AtomicLong(0);
 
-    public JsonRpcHttpServerHandle(JsonRpcClient jsonRpcClient) {
-        this.jsonRpcClient = jsonRpcClient;
+    public JsonRpcHttpServerHandle(JsonRpcClientSet jsonRpcClientSet) {
+        this.jsonRpcClientSet = jsonRpcClientSet;
     }
 
     @Override
@@ -46,6 +49,17 @@ public class JsonRpcHttpServerHandle extends ChannelHandlerAdapter {
             }
 
             JSONObject requestObj = JSON.parseObject(requestBody);
+
+            JsonRpcClient jsonRpcClient = jsonRpcClientSet.pollingJsonRpcClient();
+
+            if (jsonRpcClient == null || !jsonRpcClient.isActive()) {
+                writeErrorJson(ctx, null, -32000L, "remote server is disconnect");
+                return;
+            }
+
+            long requestIndex = requestCount.getAndIncrement();
+
+            requestObj.put("requestIndex", requestIndex);
 
             jsonRpcClient.send(requestObj,
                     new SendAndCallBack() {
@@ -122,6 +136,7 @@ public class JsonRpcHttpServerHandle extends ChannelHandlerAdapter {
     }
 
     private void writeJSONObject(ChannelHandlerContext ctx, JSONObject jsonObject) {
+        jsonObject.remove("requestIndex");
         FullHttpResponse response = new DefaultFullHttpResponse(
                 HttpVersion.HTTP_1_1, HttpResponseStatus.OK,
                 Unpooled.wrappedBuffer(jsonObject.toJSONString().getBytes())

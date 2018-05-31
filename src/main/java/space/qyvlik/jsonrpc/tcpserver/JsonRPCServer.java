@@ -43,7 +43,7 @@ public class JsonRPCServer {
             bootstrap.group(bossGroup, workerGroup);
             bootstrap.channel(NioServerSocketChannel.class);
             bootstrap.option(ChannelOption.SO_BACKLOG, 1024);
-            bootstrap.childHandler(new ChilddChannelHandler());
+            bootstrap.childHandler(new ChildChannelHandler());
             ChannelFuture channelFuture = bootstrap.bind(port).sync();
             channelFuture.channel().closeFuture().sync();
         } catch (InterruptedException e) {
@@ -54,7 +54,7 @@ public class JsonRPCServer {
         }
     }
 
-    private class ChilddChannelHandler extends
+    private class ChildChannelHandler extends
             ChannelInitializer<SocketChannel> {
         @Override
         protected void initChannel(SocketChannel ch) throws Exception {

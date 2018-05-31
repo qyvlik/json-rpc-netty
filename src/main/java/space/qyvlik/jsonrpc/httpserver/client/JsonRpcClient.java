@@ -6,11 +6,10 @@ import io.netty.channel.*;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioSocketChannel;
 
+// http://tterm.blogspot.com/2014/03/netty-tcp-client-with-reconnect-handling.html
 public class JsonRpcClient {
-
     private EventLoopGroup loopGroup;
     private Bootstrap bootstrap;
-
     private JsonRpcClientHandler jsonRpcClientHandler;
 
     public JsonRpcClient() {
@@ -66,6 +65,4 @@ public class JsonRpcClient {
             loopGroup.shutdownGracefully();
         }
     }
-
-
 }

@@ -4,9 +4,9 @@ import com.alibaba.fastjson.JSONObject;
 
 public interface JsonRpcResultFuture {
 
-    default void error(Long id, JSONObject error) {
+    default void error(long requestIndex, Long id, JSONObject error) {
     }
 
-    default void result(Long id, Object result) {
+    default void result(long requestIndex, Long id, Object result) {
     }
 }

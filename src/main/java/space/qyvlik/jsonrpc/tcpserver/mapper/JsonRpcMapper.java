@@ -18,22 +18,18 @@ public class JsonRpcMapper implements Serializable {
 
     public void callMethod(final String jsonRequestString, final JsonRpcResultFuture jsonRpcResultFuture) {
         try {
-            if (jsonRequestString.startsWith("{")) {
-                JSONObject object = JSON.parseObject(jsonRequestString);
-                callMethod(object.getLong("id"),
-                        object.getString("method"),
-                        object.getJSONArray("params"),
-                        jsonRpcResultFuture);
-            } else if (jsonRequestString.startsWith("[")) {
-                JSONArray array = JSON.parseArray(jsonRequestString);
-            } else {
-
-            }
+            JSONObject object = JSON.parseObject(jsonRequestString);
+            callMethod(
+                    object.getLong("requestIndex"),
+                    object.getLong("id"),
+                    object.getString("method"),
+                    object.getJSONArray("params"),
+                    jsonRpcResultFuture);
         } catch (Exception e) {
             JSONObject error = new JSONObject();
             error.put("code", -32000);
             error.put("message", "error: " + e.getMessage());
-            jsonRpcResultFuture.error(null, error);
+            jsonRpcResultFuture.error(0, null, error);
         }
     }
 
@@ -41,12 +37,12 @@ public class JsonRpcMapper implements Serializable {
         invokerMap.put(method, invoker);
     }
 
-    public void callMethod(final Long id, final String method, final JSONArray params, final JsonRpcResultFuture resultFuture) {
+    public void callMethod(final long requestIndex, final Long id, final String method, final JSONArray params, final JsonRpcResultFuture resultFuture) {
         if (id == null) {
             JSONObject error = new JSONObject();
             error.put("code", 50001);
             error.put("message", "id is empty");
-            resultFuture.error(id, error);
+            resultFuture.error(requestIndex, id, error);
             return;
         }
 
@@ -54,7 +50,7 @@ public class JsonRpcMapper implements Serializable {
             JSONObject error = new JSONObject();
             error.put("code", -32601);
             error.put("message", "method is empty");
-            resultFuture.error(id, error);
+            resultFuture.error(requestIndex, id, error);
             return;
         }
 
@@ -63,7 +59,7 @@ public class JsonRpcMapper implements Serializable {
             JSONObject error = new JSONObject();
             error.put("code", -32601);
             error.put("message", "method: " + method + " not found");
-            resultFuture.error(id, error);
+            resultFuture.error(requestIndex, id, error);
             return;
         }
 
@@ -71,9 +67,9 @@ public class JsonRpcMapper implements Serializable {
             JSONObject error = new JSONObject();
             error.put("code", -32602);
             error.put("message", "params is null");
-            resultFuture.error(id, error);
+            resultFuture.error(requestIndex, id, error);
         }
 
-        jsonRpcInvoker.call(id, params, resultFuture);
+        jsonRpcInvoker.call(requestIndex, id, params, resultFuture);
     }
 }

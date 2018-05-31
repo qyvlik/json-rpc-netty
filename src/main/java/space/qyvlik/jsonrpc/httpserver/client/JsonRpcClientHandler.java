@@ -24,7 +24,7 @@ public class JsonRpcClientHandler extends ChannelHandlerAdapter {
 
     }
 
-    @Skip
+    @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
         super.channelInactive(ctx);
         active.set(false);
@@ -41,7 +41,6 @@ public class JsonRpcClientHandler extends ChannelHandlerAdapter {
     public void channelActive(ChannelHandlerContext ctx) throws Exception {
         this.channelHandlerContext = ctx;
         active.set(true);
-        System.out.println("channelActive success:" + ctx);
     }
 
     @Override
@@ -53,7 +52,7 @@ public class JsonRpcClientHandler extends ChannelHandlerAdapter {
         String body = new String(req, "UTF-8");
 
         JSONObject responseObj = JSON.parseObject(body);
-        SendAndCallBack callBack = callbackMap.get(responseObj.getLong("id"));
+        SendAndCallBack callBack = callbackMap.get(responseObj.getLong("requestIndex"));
         callBack.callback(responseObj);
     }
 
@@ -74,14 +73,16 @@ public class JsonRpcClientHandler extends ChannelHandlerAdapter {
             return;
         }
 
-        if (getChannelHandlerContext() != null) {
-
-            callbackMap.put(json.getLong("id"), callBack);
-
-            ByteBuf reqByte = Unpooled.copiedBuffer(json.toJSONString().getBytes());
-
-            getChannelHandlerContext().writeAndFlush(reqByte);
+        if (getChannelHandlerContext() == null) {
+            callBack.disConnect();
+            return;
         }
+
+        callbackMap.put(json.getLong("requestIndex"), callBack);
+
+        ByteBuf reqByte = Unpooled.copiedBuffer(json.toJSONString().getBytes());
+
+        getChannelHandlerContext().writeAndFlush(reqByte);
     }
 
     public boolean isActive() {

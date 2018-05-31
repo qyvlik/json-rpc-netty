@@ -19,12 +19,12 @@ public class HelloInvoker implements IJsonRpcInvoker {
     }
 
     @Override
-    public void call(final Long id, final JSONArray params, final JsonRpcResultFuture resultFuture) {
+    public void call(final long requestIndex, final Long id, final JSONArray params, final JsonRpcResultFuture resultFuture) {
         new Thread() {
             @Override
             public void run() {
                 HelloInvoker.sleep(1000);
-                resultFuture.result(id, "hello:" + userId.incrementAndGet());
+                resultFuture.result(requestIndex, id, "hello:" + userId.incrementAndGet());
             }
         }.start();
     }

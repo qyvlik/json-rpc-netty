@@ -11,26 +11,19 @@ import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpRequestDecoder;
 import io.netty.handler.codec.http.HttpResponseEncoder;
-import space.qyvlik.jsonrpc.httpserver.client.JsonRpcClient;
+import space.qyvlik.jsonrpc.httpserver.client.JsonRpcClientSet;
 
 public class JsonRpcHttpServer {
 
     private EventLoopGroup bossGroup = new NioEventLoopGroup();
     private EventLoopGroup workerGroup = new NioEventLoopGroup();
     private ServerBootstrap bootstrap = new ServerBootstrap();
-    private JsonRpcClient jsonRpcClient;
     private JsonRpcHttpServerHandle httpServerInboundHandler;
+    private JsonRpcClientSet jsonRpcClientSet;
 
     public JsonRpcHttpServer() {
-        jsonRpcClient = new JsonRpcClient();
-        httpServerInboundHandler = new JsonRpcHttpServerHandle(jsonRpcClient);
-
-        new Thread() {
-            @Override
-            public void run() {
-                jsonRpcClient.start("localhost", 10101);
-            }
-        }.start();
+        jsonRpcClientSet = new JsonRpcClientSet(4, "localhost", 10101);
+        httpServerInboundHandler = new JsonRpcHttpServerHandle(jsonRpcClientSet);
     }
 
     public static void main(String[] args) throws Exception {

@@ -1,6 +1,5 @@
 package space.qyvlik.jsonrpc.tcpserver;
 
-import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
@@ -36,8 +35,9 @@ public class JsonRPCHandle extends ChannelHandlerAdapter {
         final ChannelHandlerContext handlerContext = ctx;
         jsonRpcMapper.callMethod(body, new JsonRpcResultFuture() {
             @Override
-            public void error(Long id, JSONObject error) {
+            public void error(long requestIndex, Long id, JSONObject error) {
                 JSONObject resp = new JSONObject();
+                resp.put("requestIndex", requestIndex);
                 resp.put("id", id);
                 resp.put("error", error);
                 String respStr = resp.toJSONString();
@@ -46,8 +46,9 @@ public class JsonRPCHandle extends ChannelHandlerAdapter {
             }
 
             @Override
-            public void result(Long id, Object result) {
+            public void result(long requestIndex, Long id, Object result) {
                 JSONObject resp = new JSONObject();
+                resp.put("requestIndex", requestIndex);
                 resp.put("id", id);
                 resp.put("result", result);
                 String respStr = resp.toJSONString();
