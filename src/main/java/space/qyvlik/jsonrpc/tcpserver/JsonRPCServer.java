@@ -20,11 +20,8 @@ public class JsonRPCServer {
     private ServerBootstrap bootstrap = new ServerBootstrap();
     private JsonRpcMapper jsonRpcMapper;
 
-    public JsonRPCServer() {
-        jsonRpcMapper = new JsonRpcMapperBuilder()
-                .add("hello", new HelloInvoker())
-                .add("ping", new PingInvoker())
-                .build();
+    public JsonRPCServer(JsonRpcMapper jsonRpcMapper) {
+        this.jsonRpcMapper = jsonRpcMapper;
     }
 
     public static void main(String[] args) throws Exception {
@@ -35,7 +32,10 @@ public class JsonRPCServer {
             return;
         }
         int port = Integer.parseInt(args[0]);        //1
-        new JsonRPCServer().start(port);                //2
+        new JsonRPCServer(new JsonRpcMapperBuilder()
+                .add("hello", new HelloInvoker())
+                .add("ping", new PingInvoker())
+                .build()).start(port);                //2
     }
 
     public void start(int port) {
