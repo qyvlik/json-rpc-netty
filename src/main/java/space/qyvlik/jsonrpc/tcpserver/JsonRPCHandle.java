@@ -27,10 +27,7 @@ public class JsonRPCHandle extends ChannelHandlerAdapter {
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg)
             throws Exception {
-        ByteBuf buf = (ByteBuf) msg;
-        final byte[] req = new byte[buf.readableBytes()];
-        buf.readBytes(req);
-        String body = new String(req, "UTF-8");
+        String body = safeGetBodyFromByteBuf((ByteBuf) msg);
 
         final ChannelHandlerContext handlerContext = ctx;
         jsonRpcMapper.callMethod(body, new JsonRpcResultFuture() {
@@ -40,9 +37,9 @@ public class JsonRPCHandle extends ChannelHandlerAdapter {
                 resp.put("requestIndex", requestIndex);
                 resp.put("id", id);
                 resp.put("error", error);
-                String respStr = resp.toJSONString();
+                String respStr = resp.toJSONString() + "\n";
                 ByteBuf respByte = Unpooled.copiedBuffer(respStr.getBytes());
-                handlerContext.writeAndFlush(respByte);
+                handlerContext.writeAndFlush(respByte);         // write to rpc-client
             }
 
             @Override
@@ -51,15 +48,17 @@ public class JsonRPCHandle extends ChannelHandlerAdapter {
                 resp.put("requestIndex", requestIndex);
                 resp.put("id", id);
                 resp.put("result", result);
-                String respStr = resp.toJSONString();
+                String respStr = resp.toJSONString() + "\n";
                 ByteBuf respByte = Unpooled.copiedBuffer(respStr.getBytes());
-                handlerContext.writeAndFlush(respByte);
+                handlerContext.writeAndFlush(respByte);     // write to rpc-client
             }
         });
     }
 
-    @Override
-    public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
-        ctx.flush();
+    private String safeGetBodyFromByteBuf(ByteBuf byteBuf) throws Exception {
+        byte[] req = new byte[byteBuf.readableBytes()];
+        byteBuf.readBytes(req);
+        byteBuf.release();
+        return new String(req, "UTF-8");
     }
 }

@@ -22,7 +22,7 @@ public class JsonRpcClientSet {
         }
         callNum = new AtomicLong(0);
         this.clientSize = clientSize;
-        executor = Executors.newFixedThreadPool(clientSize * 2);
+        executor = Executors.newFixedThreadPool(clientSize * +1);
         this.host = host;
         this.port = port;
 
@@ -45,15 +45,14 @@ public class JsonRpcClientSet {
         return jsonRpcClientList[(int) (callNum.getAndIncrement() % clientSize)];
     }
 
-    protected JsonRpcClient restartJsonRpcClient(int index, boolean create) {
+    protected JsonRpcClient restartJsonRpcClient(final int index, boolean create) {
         if (create) {
-            jsonRpcClientList[index] = new JsonRpcClient();
+            jsonRpcClientList[index] = new JsonRpcClient(index);
         }
         final JsonRpcClient jsonRpcClient = jsonRpcClientList[index];
         executor.execute(new Runnable() {
             @Override
             public void run() {
-//                System.out.println(create ? "start client" : "restart client");
                 jsonRpcClient.start(host, port);
             }
         });

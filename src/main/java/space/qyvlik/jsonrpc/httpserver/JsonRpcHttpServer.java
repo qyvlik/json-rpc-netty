@@ -25,14 +25,9 @@ public class JsonRpcHttpServer {
     private JsonRpcHttpServerHandle httpServerInboundHandler;
     private JsonRpcClientSet jsonRpcClientSet;
 
-    public JsonRpcHttpServer() {
-        jsonRpcClientSet = new JsonRpcClientSet(4, "localhost", 10101);
+    public JsonRpcHttpServer(String rpcServerHost, int rpcServerPort, int clientSize) {
+        jsonRpcClientSet = new JsonRpcClientSet(clientSize, rpcServerHost, rpcServerPort);
         httpServerInboundHandler = new JsonRpcHttpServerHandle(jsonRpcClientSet);
-    }
-
-    public static void main(String[] args) throws Exception {
-        JsonRpcHttpServer server = new JsonRpcHttpServer();
-        server.start(10102);
     }
 
     public void start(int port) throws Exception {
@@ -48,7 +43,7 @@ public class JsonRpcHttpServer {
                             ch.pipeline().addLast(new HttpObjectAggregator(2048));
                             ch.pipeline().addLast(httpServerInboundHandler);
                         }
-                    }).option(ChannelOption.SO_BACKLOG, 128)
+                    }).option(ChannelOption.SO_BACKLOG, 4096)
                     .childOption(ChannelOption.SO_KEEPALIVE, true);
 
             ChannelFuture f = bootstrap.bind(port).sync();

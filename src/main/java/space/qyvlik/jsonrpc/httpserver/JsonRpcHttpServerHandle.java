@@ -16,7 +16,6 @@ import space.qyvlik.jsonrpc.httpserver.client.SendAndCallBack;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.atomic.AtomicLong;
 
-
 @ChannelHandler.Sharable
 public class JsonRpcHttpServerHandle extends ChannelHandlerAdapter {
     private JsonRpcClientSet jsonRpcClientSet;
@@ -48,12 +47,23 @@ public class JsonRpcHttpServerHandle extends ChannelHandlerAdapter {
                 return;
             }
 
-            JSONObject requestObj = JSON.parseObject(requestBody);
+            JSONObject requestObj = null;
+            try {
+                requestObj = JSON.parseObject(requestBody);
+            } catch (Exception e) {
+                writeErrorJson(ctx, null, -32700L, "parse json error");
+                return;
+            }
 
             JsonRpcClient jsonRpcClient = jsonRpcClientSet.pollingJsonRpcClient();
 
-            if (jsonRpcClient == null || !jsonRpcClient.isActive()) {
-                writeErrorJson(ctx, null, -32000L, "remote server is disconnect");
+            if (jsonRpcClient == null) {
+                writeErrorJson(ctx, null, -32000L, "cannot get connect resource");
+                return;
+            }
+
+            if (!jsonRpcClient.isActive()) {
+                writeErrorJson(ctx, null, -32000L, "json rpc client is inactive");
                 return;
             }
 
@@ -106,16 +116,6 @@ public class JsonRpcHttpServerHandle extends ChannelHandlerAdapter {
         }
 
         if (!string.contains("params")) {
-            return false;
-        }
-
-        try {
-            if (string.startsWith("{")) {
-                JSON.parseObject(string);
-            } else {
-                JSON.parseArray(string);
-            }
-        } catch (Exception e) {
             return false;
         }
 

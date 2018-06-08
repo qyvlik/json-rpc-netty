@@ -12,16 +12,18 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+
 @ChannelHandler.Sharable
 public class JsonRpcClientHandler extends ChannelHandlerAdapter {
 
+    private int index;
     private ChannelHandlerContext channelHandlerContext;
     private ConcurrentSkipListMap<Long, SendAndCallBack> callbackMap = new ConcurrentSkipListMap();
     private AtomicBoolean active = new AtomicBoolean(false);
     private AtomicBoolean connecting = new AtomicBoolean(true);
 
-    public JsonRpcClientHandler() {
-
+    public JsonRpcClientHandler(int index) {
+        this.index = index;
     }
 
     @Override
@@ -48,14 +50,26 @@ public class JsonRpcClientHandler extends ChannelHandlerAdapter {
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg)
             throws Exception {
-        ByteBuf buf = (ByteBuf) msg;
-        byte[] req = new byte[buf.readableBytes()];
-        buf.readBytes(req);
-        String body = new String(req, "UTF-8");
+
+        String body = safeGetBodyFromByteBuf((ByteBuf) msg);
 
         JSONObject responseObj = JSON.parseObject(body);
-        SendAndCallBack callBack = callbackMap.get(responseObj.getLong("requestIndex"));
-        callBack.callback(responseObj);
+        Long requestIndex = responseObj.getLong("requestIndex");
+        if (requestIndex == null) {
+            return;
+        }
+
+        SendAndCallBack callBack = callbackMap.remove(requestIndex);
+        if (callBack != null) {
+            callBack.callback(responseObj);
+        }
+    }
+
+    private String safeGetBodyFromByteBuf(ByteBuf byteBuf) throws Exception {
+        byte[] req = new byte[byteBuf.readableBytes()];
+        byteBuf.readBytes(req);
+        byteBuf.release();
+        return new String(req, "UTF-8");
     }
 
     @Override
@@ -83,7 +97,9 @@ public class JsonRpcClientHandler extends ChannelHandlerAdapter {
 
         callbackMap.put(json.getLong("requestIndex"), callBack);
 
-        ByteBuf reqByte = Unpooled.copiedBuffer(json.toJSONString().getBytes());
+        StringBuffer stringBuffer = new StringBuffer(json.toJSONString());
+        stringBuffer.append("\n");
+        ByteBuf reqByte = Unpooled.copiedBuffer(stringBuffer.toString().getBytes());
 
         getChannelHandlerContext().writeAndFlush(reqByte);
     }
